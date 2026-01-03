@@ -4,6 +4,11 @@
 #include <bluefruit.h>
 #include <Wire.h>
 
+#ifdef RAK_ETH_ENABLE
+
+
+#endif
+
 static BLEDfu bledfu;
 
 static void connect_callback(uint16_t conn_handle) {
@@ -28,6 +33,10 @@ void RAK4631Board::begin() {
 
 #ifdef PIN_USER_BTN_ANA
   pinMode(PIN_USER_BTN_ANA, INPUT_PULLUP);
+#endif
+
+#ifdef RAK_ETH_ENABLE
+  beginETH();
 #endif
 
 #if defined(PIN_BOARD_SDA) && defined(PIN_BOARD_SCL)

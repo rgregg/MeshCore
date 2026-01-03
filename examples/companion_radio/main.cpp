@@ -18,13 +18,13 @@ static uint32_t _atoi(const char* sp) {
     #include <CustomLFS_QSPIFlash.h>
     DataStore store(InternalFS, QSPIFlash, rtc_clock);
   #else
-  #if defined(EXTRAFS)
-    #include <CustomLFS.h>
-    CustomLFS ExtraFS(0xD4000, 0x19000, 128);
-    DataStore store(InternalFS, ExtraFS, rtc_clock);
-  #else
-    DataStore store(InternalFS, rtc_clock);
-  #endif
+    #if defined(EXTRAFS)
+      #include <CustomLFS.h>
+      CustomLFS ExtraFS(0xD4000, 0x19000, 128);
+      DataStore store(InternalFS, ExtraFS, rtc_clock);
+    #else
+      DataStore store(InternalFS, rtc_clock);
+    #endif
   #endif
 #elif defined(RP2040_PLATFORM)
   #include <LittleFS.h>
@@ -74,13 +74,21 @@ static uint32_t _atoi(const char* sp) {
   #ifdef BLE_PIN_CODE
     #include <helpers/nrf52/SerialBLEInterface.h>
     SerialBLEInterface serial_interface;
+  #elif defined(ETH_ENABLED)
+    #include <helpers/nrf52/SerialEthernetRAKInterface.h>
+    SerialEthernetRAKInterface serial_interface;
   #else
     #include <helpers/ArduinoSerialInterface.h>
     ArduinoSerialInterface serial_interface;
   #endif
 #elif defined(STM32_PLATFORM)
-  #include <helpers/ArduinoSerialInterface.h>
-  ArduinoSerialInterface serial_interface;
+  #ifdef ETH_ENABLED
+    #include <helpers/nrf52/SerialEthernetRAKInterface.h>
+    SerialEthernetRAKInterface serial_interface;
+  #elif
+    #include <helpers/ArduinoSerialInterface.h>
+    ArduinoSerialInterface serial_interface;
+  #endif
 #else
   #error "need to define a serial interface"
 #endif
@@ -154,6 +162,8 @@ void setup() {
   char dev_name[32+16];
   sprintf(dev_name, "%s%s", BLE_NAME_PREFIX, the_mesh.getNodeName());
   serial_interface.begin(dev_name, the_mesh.getBLEPin());
+#elif ETH_ENABLED
+  serial_interface.begin();
 #else
   serial_interface.begin(Serial);
 #endif
