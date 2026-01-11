@@ -5,10 +5,8 @@
 
 // expects ETH_ENABLED = 1
 #define TCP_PORT 8080
-#define PIN_ETH_POWER WB_IO2    // output, high to enable
-#define PIN_ETH_RESET WB_IO3    // output, pulse high for 100ms to reset
 
-class SerialEthernetRAKInterface : public BaseSerialInterface {
+class SerialEthernetInterface : public BaseSerialInterface {
   bool deviceConnected;
   bool _isEnabled;
   unsigned long _last_write;
@@ -33,7 +31,7 @@ class SerialEthernetRAKInterface : public BaseSerialInterface {
   protected:
 
   public:
-    SerialEthernetRAKInterface() : server(EthernetServer(TCP_PORT)) { 
+    SerialEthernetInterface() : server(EthernetServer(TCP_PORT)) { 
         deviceConnected = false;
         _isEnabled = false;
         _last_write = 0;
@@ -60,7 +58,7 @@ private:
 #if ETH_DEBUG_LOGGING && ARDUINO
   #include <Arduino.h>
   #define ETH_DEBUG_PRINT(F, ...) Serial.printf("ETH: " F, ##__VA_ARGS__)
-  #define ETH_DEBUG_PRINTLN(F, ...) Serial.printf("WiFi: " F "\n", ##__VA_ARGS__)
+  #define ETH_DEBUG_PRINTLN(F, ...) Serial.printf("ETH: " F "\n", ##__VA_ARGS__)
 #else
   #define ETH_DEBUG_PRINT(...) {}
   #define ETH_DEBUG_PRINTLN(...) {}
