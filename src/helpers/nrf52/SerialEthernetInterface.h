@@ -4,13 +4,17 @@
 #include <RAK13800_W5100S.h>
 
 // expects ETH_ENABLED = 1
-#define TCP_PORT 8080
+#define TCP_PORT 5000
 
 class SerialEthernetInterface : public BaseSerialInterface {
   bool deviceConnected;
   bool _isEnabled;
   unsigned long _last_write;
   unsigned long adv_restart_time;
+  uint8_t _state;
+  uint16_t _frame_len;
+  uint16_t _rx_len;
+  uint8_t _rx_buf[MAX_FRAME_SIZE];
 
   EthernetServer server;
   EthernetClient client;
@@ -26,7 +30,13 @@ class SerialEthernetInterface : public BaseSerialInterface {
   int send_queue_len;
   Frame send_queue[FRAME_QUEUE_SIZE];
 
-  void clearBuffers() { recv_queue_len = 0; send_queue_len = 0; }
+  void clearBuffers() {
+    recv_queue_len = 0;
+    send_queue_len = 0;
+    _state = 0;
+    _frame_len = 0;
+    _rx_len = 0;
+  }
 
   protected:
 
@@ -36,6 +46,9 @@ class SerialEthernetInterface : public BaseSerialInterface {
         _isEnabled = false;
         _last_write = 0;
         send_queue_len = recv_queue_len = 0;
+        _state = 0;
+        _frame_len = 0;
+        _rx_len = 0;
     }
     bool begin();
 
@@ -50,6 +63,8 @@ class SerialEthernetInterface : public BaseSerialInterface {
     size_t writeFrame(const uint8_t src[], size_t len) override;
     size_t checkRecvFrame(uint8_t dest[]) override;
 
+    void maintain();
+
 private:
   void generateDeviceMac(uint8_t mac[6]);
 };
@@ -59,7 +74,9 @@ private:
   #include <Arduino.h>
   #define ETH_DEBUG_PRINT(F, ...) Serial.printf("ETH: " F, ##__VA_ARGS__)
   #define ETH_DEBUG_PRINTLN(F, ...) Serial.printf("ETH: " F "\n", ##__VA_ARGS__)
+  #define ETH_DEBUG_PRINT_IP(name, ip) Serial.printf(name ": %u.%u.%u.%u" "\n", ip[0], ip[1], ip[2], ip[3])
 #else
   #define ETH_DEBUG_PRINT(...) {}
   #define ETH_DEBUG_PRINTLN(...) {}
+  #define ETH_DEBUG_PRINT_IP(...) {}
 #endif

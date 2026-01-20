@@ -254,10 +254,14 @@ void loop() {
   ui_task.loop();
 #endif
   rtc_clock.tick();
- 
+
   // Debugging only... making sure something is alive.
   tick_count++;
   if (tick_count % 5000 == 0) {
     Serial.print(".");
   }
+
+#ifdef ETH_ENABLED
+  serial_interface.maintain();
+#endif
 }
