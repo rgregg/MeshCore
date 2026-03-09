@@ -200,7 +200,15 @@ size_t SerialEthernetInterface::checkRecvFrame(uint8_t dest[]) {
       _last_write = millis();
       int len = send_queue[0].len;
 
-      uint8_t pkt[3+len]; // use same header as serial interface so client can delimit frames
+#if ETH_RAW_LINE
+      ETH_DEBUG_PRINTLN("Sending line len=%d", len);
+      #if ETH_DEBUG_LOGGING && ARDUINO
+      ETH_DEBUG_PRINTLN("TX line len=%d", len);
+      #endif
+      client.write(send_queue[0].buf, len);
+      client.write("\r\n", 2);
+#else
+      uint8_t pkt[3 + len]; // use same header as serial interface so client can delimit frames
       pkt[0] = '>';
       pkt[1] = (len & 0xFF);  // LSB
       pkt[2] = (len >> 8);    // MSB
@@ -210,6 +218,7 @@ size_t SerialEthernetInterface::checkRecvFrame(uint8_t dest[]) {
       ETH_DEBUG_PRINTLN("TX frame len=%d", len);
       #endif
       client.write(pkt, 3 + len);
+#endif
       send_queue_len--;
       for (int i = 0; i < send_queue_len; i++) {   // delete top item from queue
         send_queue[i] = send_queue[i + 1];
@@ -219,6 +228,24 @@ size_t SerialEthernetInterface::checkRecvFrame(uint8_t dest[]) {
         int c = client.read();
         if (c < 0) break;
 
+#if ETH_RAW_LINE
+        if (c == '\r' || c == '\n') {
+          if (_rx_len == 0) {
+            continue;
+          }
+          uint16_t out_len = _rx_len;
+          if (out_len > MAX_FRAME_SIZE) {
+            out_len = MAX_FRAME_SIZE;
+          }
+          memcpy(dest, _rx_buf, out_len);
+          _rx_len = 0;
+          return out_len;
+        }
+        if (_rx_len < MAX_FRAME_SIZE) {
+          _rx_buf[_rx_len] = (uint8_t)c;
+          _rx_len++;
+        }
+#else
         switch (_state) {
           case RECV_STATE_IDLE:
             if (c == '<') {
@@ -251,6 +278,7 @@ size_t SerialEthernetInterface::checkRecvFrame(uint8_t dest[]) {
               return _frame_len;
             }
         }
+#endif
       }
     }
   }

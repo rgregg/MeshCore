@@ -5,6 +5,7 @@
 
 // expects ETH_ENABLED = 1
 #define TCP_PORT 5000
+// define ETH_RAW_LINE=1 to use raw line-based CLI instead of framed packets
 
 class SerialEthernetInterface : public BaseSerialInterface {
   bool deviceConnected;

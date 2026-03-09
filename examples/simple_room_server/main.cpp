@@ -3,6 +3,13 @@
 
 #include "MyMesh.h"
 
+#ifdef ETH_ENABLED
+  #include <helpers/nrf52/SerialEthernetInterface.h>
+  SerialEthernetInterface eth_interface;
+  static uint8_t eth_frame[MAX_FRAME_SIZE];
+  static char eth_command[MAX_POST_TEXT_LEN + 1];
+#endif
+
 #ifdef DISPLAY_CLASS
   #include "UITask.h"
   static UITask ui_task(display);
@@ -17,6 +24,25 @@ void halt() {
 }
 
 static char command[MAX_POST_TEXT_LEN+1];
+
+static void handleCliCommand(char *command_buf, bool via_eth) {
+  char reply[160];
+  the_mesh.handleCommand(0, command_buf, reply);  // NOTE: no sender_timestamp via serial!
+  if (!reply[0]) {
+    return;
+  }
+
+#ifdef ETH_ENABLED
+  if (via_eth) {
+    size_t reply_len = strlen(reply);
+    eth_interface.writeFrame(reinterpret_cast<const uint8_t *>(reply), reply_len);
+    return;
+  }
+#endif
+
+  Serial.print("  -> ");
+  Serial.println(reply);
+}
 
 void setup() {
   Serial.begin(115200);
@@ -67,6 +93,9 @@ void setup() {
   mesh::Utils::printHex(Serial, the_mesh.self_id.pub_key, PUB_KEY_SIZE); Serial.println();
 
   command[0] = 0;
+#ifdef ETH_ENABLED
+  eth_command[0] = 0;
+#endif
 
   sensors.begin();
 
@@ -74,6 +103,26 @@ void setup() {
 
 #ifdef DISPLAY_CLASS
   ui_task.begin(the_mesh.getNodePrefs(), FIRMWARE_BUILD_DATE, FIRMWARE_VERSION);
+#endif
+
+#ifdef ETH_ENABLED
+  Serial.print("Waiting for serial to connect...\n");
+  unsigned long timeout = millis();
+  while (!Serial) {
+    if ((millis() - timeout) < 5000) {
+      delay(100);
+    } else {
+      break;
+    }
+  }
+  Serial.print("Initalizing ethernet adapter....\n");
+  bool result = eth_interface.begin();
+  if (!result) {
+    while (true) {
+      delay(1); // Do nothing, just love you.
+    }
+  }
+  eth_interface.enable();
 #endif
 
   // send out initial Advertisement to the mesh
@@ -96,14 +145,25 @@ void loop() {
 
   if (len > 0 && command[len - 1] == '\r') {  // received complete line
     command[len - 1] = 0;  // replace newline with C string null terminator
-    char reply[160];
-    the_mesh.handleCommand(0, command, reply);  // NOTE: there is no sender_timestamp via serial!
-    if (reply[0]) {
-      Serial.print("  -> "); Serial.println(reply);
-    }
+    handleCliCommand(command, false);
 
     command[0] = 0;  // reset command buffer
   }
+
+#ifdef ETH_ENABLED
+  size_t eth_len = eth_interface.checkRecvFrame(eth_frame);
+  if (eth_len > 0) {
+    size_t copy_len = eth_len;
+    if (copy_len >= sizeof(eth_command)) {
+      copy_len = sizeof(eth_command) - 1;
+    }
+    memcpy(eth_command, eth_frame, copy_len);
+    eth_command[copy_len] = 0;
+    handleCliCommand(eth_command, true);
+    eth_command[0] = 0;
+  }
+  eth_interface.maintain();
+#endif
 
   the_mesh.loop();
   sensors.loop();
