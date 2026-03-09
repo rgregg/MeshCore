@@ -101,6 +101,10 @@ void MqttTelemetry::publishStatus(bool online) {
 void MqttTelemetry::publishStats() {
   if (!_callbacks) return;
 
+  // Refresh retained topics
+  publishStatus(true);
+  publishConfig();
+
   char buf[256];
 
   // Core stats
