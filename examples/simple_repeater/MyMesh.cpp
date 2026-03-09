@@ -466,8 +466,7 @@ void MyMesh::logRx(mesh::Packet *pkt, int len, float score) {
   }
 #endif
 #ifdef ETH_ENABLED
-  mqtt_telemetry.publishPacketRx(pkt->getPayloadType(), pkt->isRouteDirect(), len, pkt->payload_len,
-                                  _radio->getLastSNR(), _radio->getLastRSSI());
+  mqtt_telemetry.publishPacketRx(pkt, len, score, _radio->getLastSNR(), _radio->getLastRSSI());
 #endif
 
   if (_logging) {
@@ -496,7 +495,7 @@ void MyMesh::logTx(mesh::Packet *pkt, int len) {
   }
 #endif
 #ifdef ETH_ENABLED
-  mqtt_telemetry.publishPacketTx(pkt->getPayloadType(), pkt->isRouteDirect(), len, pkt->payload_len);
+  mqtt_telemetry.publishPacketTx(pkt, len);
 #endif
 
   if (_logging) {
@@ -639,6 +638,11 @@ void MyMesh::onAdvertRecv(mesh::Packet *packet, const mesh::Identity &id, uint32
       putNeighbour(id, timestamp, packet->getSNR());
     }
   }
+
+#ifdef ETH_ENABLED
+  mqtt_telemetry.publishAdvert(id, timestamp, app_data, app_data_len,
+                                packet->getSNR(), packet->getPathHashCount());
+#endif
 }
 
 void MyMesh::onPeerDataRecv(mesh::Packet *packet, uint8_t type, int sender_idx, const uint8_t *secret,
@@ -1046,6 +1050,40 @@ void MyMesh::formatNeighborsReply(char *reply) {
     dp += 6;
   }
   *dp = 0; // null terminator
+}
+
+int MyMesh::formatNeighborsJson(char *reply, int max_len) {
+  int n = 0;
+  n += snprintf(reply + n, max_len - n, "[");
+
+#if MAX_NEIGHBOURS
+  int16_t neighbours_count = 0;
+  NeighbourInfo* sorted_neighbours[MAX_NEIGHBOURS];
+  for (int i = 0; i < MAX_NEIGHBOURS; i++) {
+    if (neighbours[i].heard_timestamp > 0) {
+      sorted_neighbours[neighbours_count++] = &neighbours[i];
+    }
+  }
+
+  std::sort(sorted_neighbours, sorted_neighbours + neighbours_count, [](const NeighbourInfo* a, const NeighbourInfo* b) {
+    return a->heard_timestamp > b->heard_timestamp;
+  });
+
+  uint32_t now = getRTCClock()->getCurrentTime();
+  for (int i = 0; i < neighbours_count && n < max_len - 60; i++) {
+    NeighbourInfo *nb = sorted_neighbours[i];
+    char hex[10];
+    mesh::Utils::toHex(hex, nb->id.pub_key, 4);
+    uint32_t secs_ago = now - nb->heard_timestamp;
+
+    n += snprintf(reply + n, max_len - n, "%s{\"id\":\"%s\",\"last_seen\":%lu,\"snr\":%.2f}",
+      i > 0 ? "," : "",
+      hex, (unsigned long)secs_ago, nb->snr / 4.0f);
+  }
+#endif
+
+  n += snprintf(reply + n, max_len - n, "]");
+  return n;
 }
 
 void MyMesh::removeNeighbor(const uint8_t *pubkey, int key_len) {

@@ -190,6 +190,14 @@ public:
   const char* getBuildDate() override { return FIRMWARE_BUILD_DATE; }
   const char* getRole() override { return FIRMWARE_ROLE; }
   const char* getNodeName() { return _prefs.node_name; }
+  uint32_t getEpochTime() { return getRTCClock()->getCurrentTime(); }
+  const char* getPublicKeyHex() {
+    static char hex[PUB_KEY_SIZE * 2 + 1] = {0};
+    if (hex[0] == 0) {
+      for (int i = 0; i < PUB_KEY_SIZE; i++) sprintf(hex + i * 2, "%02X", self_id.pub_key[i]);
+    }
+    return hex;
+  }
   NodePrefs* getNodePrefs() {
     return &_prefs;
   }
@@ -213,6 +221,7 @@ public:
   void dumpLogFile() override;
   void setTxPower(int8_t power_dbm) override;
   void formatNeighborsReply(char *reply) override;
+  int formatNeighborsJson(char *reply, int max_len) override;
   void removeNeighbor(const uint8_t* pubkey, int key_len) override;
   void formatStatsReply(char *reply) override;
   void formatRadioStatsReply(char *reply) override;

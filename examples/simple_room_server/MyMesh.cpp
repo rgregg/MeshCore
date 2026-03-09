@@ -208,8 +208,7 @@ void MyMesh::logRxRaw(float snr, float rssi, const uint8_t raw[], int len) {
 
 void MyMesh::logRx(mesh::Packet *pkt, int len, float score) {
 #ifdef ETH_ENABLED
-  mqtt_telemetry.publishPacketRx(pkt->getPayloadType(), pkt->isRouteDirect(), len, pkt->payload_len,
-                                  _radio->getLastSNR(), _radio->getLastRSSI());
+  mqtt_telemetry.publishPacketRx(pkt, len, score, _radio->getLastSNR(), _radio->getLastRSSI());
 #endif
   if (_logging) {
     File f = openAppend(PACKET_LOG_FILE);
@@ -231,7 +230,7 @@ void MyMesh::logRx(mesh::Packet *pkt, int len, float score) {
 }
 void MyMesh::logTx(mesh::Packet *pkt, int len) {
 #ifdef ETH_ENABLED
-  mqtt_telemetry.publishPacketTx(pkt->getPayloadType(), pkt->isRouteDirect(), len, pkt->payload_len);
+  mqtt_telemetry.publishPacketTx(pkt, len);
 #endif
   if (_logging) {
     File f = openAppend(PACKET_LOG_FILE);
@@ -260,6 +259,15 @@ void MyMesh::logTxFail(mesh::Packet *pkt, int len) {
       f.close();
     }
   }
+}
+
+void MyMesh::onAdvertRecv(mesh::Packet *packet, const mesh::Identity &id, uint32_t timestamp,
+                          const uint8_t *app_data, size_t app_data_len) {
+  mesh::Mesh::onAdvertRecv(packet, id, timestamp, app_data, app_data_len);
+#ifdef ETH_ENABLED
+  mqtt_telemetry.publishAdvert(id, timestamp, app_data, app_data_len,
+                                packet->getSNR(), packet->getPathHashCount());
+#endif
 }
 
 int MyMesh::calcRxDelay(float score, uint32_t air_time) const {

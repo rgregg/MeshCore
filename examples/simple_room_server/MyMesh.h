@@ -136,6 +136,8 @@ protected:
   void logRx(mesh::Packet* pkt, int len, float score) override;
   void logTx(mesh::Packet* pkt, int len) override;
   void logTxFail(mesh::Packet* pkt, int len) override;
+  void onAdvertRecv(mesh::Packet* packet, const mesh::Identity& id, uint32_t timestamp,
+                    const uint8_t* app_data, size_t app_data_len) override;
 
   int calcRxDelay(float score, uint32_t air_time) const override;
   const char* getLogDateTime() override;
@@ -175,6 +177,14 @@ public:
   const char* getBuildDate() override { return FIRMWARE_BUILD_DATE; }
   const char* getRole() override { return FIRMWARE_ROLE; }
   const char* getNodeName() { return _prefs.node_name; }
+  uint32_t getEpochTime() { return getRTCClock()->getCurrentTime(); }
+  const char* getPublicKeyHex() {
+    static char hex[PUB_KEY_SIZE * 2 + 1] = {0};
+    if (hex[0] == 0) {
+      for (int i = 0; i < PUB_KEY_SIZE; i++) sprintf(hex + i * 2, "%02X", self_id.pub_key[i]);
+    }
+    return hex;
+  }
   NodePrefs* getNodePrefs() {
     return &_prefs;
   }
@@ -200,6 +210,9 @@ public:
 
   void formatNeighborsReply(char *reply) override {
     strcpy(reply, "not supported");
+  }
+  int formatNeighborsJson(char *reply, int max_len) override {
+    return snprintf(reply, max_len, "[]");
   }
   void formatStatsReply(char *reply) override;
   void formatRadioStatsReply(char *reply) override;

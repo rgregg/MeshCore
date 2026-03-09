@@ -46,6 +46,7 @@
     digitalWrite(PIN_ETHERNET_RESET, LOW);
     vTaskDelay(pdMS_TO_TICKS(100));
     digitalWrite(PIN_ETHERNET_RESET, HIGH);
+    vTaskDelay(pdMS_TO_TICKS(100));  // W5100S needs time after reset release
 
     ETH_SPI_PORT.begin();
     Ethernet.init(ETH_SPI_PORT, PIN_ETHERNET_SS);
@@ -56,18 +57,19 @@
         mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
     while (!eth_running) {
-      if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-        Serial.println("ETH: Hardware not found, giving up");
-        vTaskDelete(NULL);
-        return;
-      }
       if (Ethernet.linkStatus() == LinkOFF) {
+        Serial.println("ETH: No link, will retry");
         vTaskDelay(pdMS_TO_TICKS(ETH_RETRY_INTERVAL_MS));
         continue;
       }
 
       Serial.println("ETH: Link detected, attempting DHCP...");
       if (Ethernet.begin(mac, 10000, 2000) == 0) {
+        if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+          Serial.println("ETH: Hardware not found, giving up");
+          vTaskDelete(NULL);
+          return;
+        }
         Serial.println("ETH: DHCP failed, will retry");
         vTaskDelay(pdMS_TO_TICKS(ETH_RETRY_INTERVAL_MS));
         continue;
@@ -120,6 +122,43 @@
   #include <helpers/MqttTelemetry.h>
   MqttTelemetry mqtt_telemetry;
 #endif
+
+static void print_help(Print& out) {
+  out.println("Commands:");
+  out.println("  ver                  - firmware version");
+  out.println("  board                - board info");
+  out.println("  reboot               - reboot device");
+  out.println("  get <setting>        - get setting value");
+  out.println("  set <setting> <val>  - set setting value");
+  out.println("  Settings: name, radio, freq, tx, lat, lon, af, rxdelay,");
+  out.println("    txdelay, direct.txdelay, flood.max, advert.interval,");
+  out.println("    flood.advert.interval, guest.password, allow.read.only,");
+  out.println("    multi.acks, int.thresh, agc.reset.interval, owner.info,");
+  out.println("    path.hash.mode, loop.detect, adc.multiplier, prv.key");
+  out.println("  password <pw>        - set admin password");
+  out.println("  advert               - send flood advertisement");
+  out.println("  advert.zerohop       - send zero-hop advertisement");
+  out.println("  neighbors            - list neighbor nodes");
+  out.println("  neighbor.remove <id> - remove a neighbor");
+  out.println("  clear stats          - reset statistics");
+  out.println("  clock / clock sync   - show/sync RTC clock");
+  out.println("  time <epoch>         - set RTC time");
+  out.println("  log start/stop/erase - packet logging");
+  out.println("  powersaving on/off   - power saving mode");
+  out.println("  sensor list          - list sensors");
+  out.println("  setperm <id> <perm>  - set client permissions");
+  out.println("  get acl              - list access control entries");
+  out.println("  tempradio <params>   - temporary radio parameters");
+#ifdef ETH_ENABLED
+  out.println("  eth                  - ethernet status");
+  out.println("  mqtt                 - MQTT status & settings");
+  out.println("  mqtt mqtt://[user:pass@]broker[:port]");
+  out.println("                       - configure MQTT broker");
+  out.println("  mqtt prefix <pfx>    - topic prefix (default meshcore)");
+  out.println("  mqtt interval <secs> - publish interval (10-3600, default 60)");
+  out.println("  mqtt on / mqtt off   - enable/disable MQTT");
+#endif
+}
 
 StdRNG fast_rng;
 SimpleMeshTables tables;
@@ -227,10 +266,14 @@ void loop() {
     command[len - 1] = 0;  // replace newline with C string null terminator
     char reply[160];
     reply[0] = 0;
+    if (strcmp(command, "help") == 0) {
+      print_help(Serial);
+    } else {
 #ifdef ETH_ENABLED
-    if (!eth_handle_command(command, reply) && !mqtt_telemetry.handleCommand(command, reply))
+      if (!eth_handle_command(command, reply) && !mqtt_telemetry.handleCommand(command, reply))
 #endif
-    the_mesh.handleCommand(0, command, reply);  // NOTE: there is no sender_timestamp via serial!
+      the_mesh.handleCommand(0, command, reply);  // NOTE: there is no sender_timestamp via serial!
+    }
     if (reply[0]) {
       Serial.print("  -> "); Serial.println(reply);
     }
@@ -248,10 +291,10 @@ void loop() {
     int elen = strlen(eth_command);
     while (eth_client.available() && elen < (int)sizeof(eth_command)-1) {
       char c = eth_client.read();
-      if (c == '\n') continue;
+      if (c == '\n' && elen == 0) continue;  // ignore leading LF (from CR+LF)
+      if (c == '\r' || c == '\n') { eth_command[elen++] = '\r'; break; }
       eth_command[elen++] = c;
       eth_command[elen] = 0;
-      if (c == '\r') break;
     }
     if (elen == sizeof(eth_command)-1) {
       eth_command[sizeof(eth_command)-1] = '\r';
@@ -262,8 +305,12 @@ void loop() {
       eth_client.println();
       char reply[160];
       reply[0] = 0;
-      if (!eth_handle_command(eth_command, reply))
-        the_mesh.handleCommand(0, eth_command, reply);
+      if (strcmp(eth_command, "help") == 0) {
+        print_help(eth_client);
+      } else {
+        if (!eth_handle_command(eth_command, reply) && !mqtt_telemetry.handleCommand(eth_command, reply))
+          the_mesh.handleCommand(0, eth_command, reply);
+      }
       if (reply[0]) {
         eth_client.print("  -> "); eth_client.println(reply);
       }
