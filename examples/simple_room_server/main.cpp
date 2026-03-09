@@ -116,6 +116,11 @@
   static UITask ui_task(display);
 #endif
 
+#ifdef ETH_ENABLED
+  #include <helpers/MqttTelemetry.h>
+  MqttTelemetry mqtt_telemetry;
+#endif
+
 StdRNG fast_rng;
 SimpleMeshTables tables;
 MyMesh the_mesh(board, radio_driver, *new ArduinoMillis(), fast_rng, rtc_clock, tables);
@@ -186,6 +191,10 @@ void setup() {
 
   the_mesh.begin(fs);
 
+#ifdef ETH_ENABLED
+  mqtt_telemetry.begin(fs, &the_mesh, the_mesh.getNodeName());
+#endif
+
 #ifdef DISPLAY_CLASS
   ui_task.begin(the_mesh.getNodePrefs(), FIRMWARE_BUILD_DATE, FIRMWARE_VERSION);
 #endif
@@ -219,7 +228,7 @@ void loop() {
     char reply[160];
     reply[0] = 0;
 #ifdef ETH_ENABLED
-    if (!eth_handle_command(command, reply))
+    if (!eth_handle_command(command, reply) && !mqtt_telemetry.handleCommand(command, reply))
 #endif
     the_mesh.handleCommand(0, command, reply);  // NOTE: there is no sender_timestamp via serial!
     if (reply[0]) {
@@ -266,6 +275,9 @@ void loop() {
 
   the_mesh.loop();
   sensors.loop();
+#ifdef ETH_ENABLED
+  mqtt_telemetry.loop(millis());
+#endif
 #ifdef DISPLAY_CLASS
   ui_task.loop();
 #endif

@@ -1,6 +1,10 @@
 #include "MyMesh.h"
 #include <algorithm>
 
+#ifdef ETH_ENABLED
+extern MqttTelemetry mqtt_telemetry;
+#endif
+
 /* ------------------------------ Config -------------------------------- */
 
 #ifndef LORA_FREQ
@@ -461,6 +465,10 @@ void MyMesh::logRx(mesh::Packet *pkt, int len, float score) {
     bridge.sendPacket(pkt);
   }
 #endif
+#ifdef ETH_ENABLED
+  mqtt_telemetry.publishPacketRx(pkt->getPayloadType(), pkt->isRouteDirect(), len, pkt->payload_len,
+                                  _radio->getLastSNR(), _radio->getLastRSSI());
+#endif
 
   if (_logging) {
     File f = openAppend(PACKET_LOG_FILE);
@@ -486,6 +494,9 @@ void MyMesh::logTx(mesh::Packet *pkt, int len) {
   if (_prefs.bridge_pkt_src == 0) {
     bridge.sendPacket(pkt);
   }
+#endif
+#ifdef ETH_ENABLED
+  mqtt_telemetry.publishPacketTx(pkt->getPayloadType(), pkt->isRouteDirect(), len, pkt->payload_len);
 #endif
 
   if (_logging) {

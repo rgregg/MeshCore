@@ -1,5 +1,9 @@
 #include "MyMesh.h"
 
+#ifdef ETH_ENABLED
+extern MqttTelemetry mqtt_telemetry;
+#endif
+
 #define REPLY_DELAY_MILLIS          1500
 #define PUSH_NOTIFY_DELAY_MILLIS    2000
 #define SYNC_PUSH_INTERVAL          1200
@@ -203,6 +207,10 @@ void MyMesh::logRxRaw(float snr, float rssi, const uint8_t raw[], int len) {
 }
 
 void MyMesh::logRx(mesh::Packet *pkt, int len, float score) {
+#ifdef ETH_ENABLED
+  mqtt_telemetry.publishPacketRx(pkt->getPayloadType(), pkt->isRouteDirect(), len, pkt->payload_len,
+                                  _radio->getLastSNR(), _radio->getLastRSSI());
+#endif
   if (_logging) {
     File f = openAppend(PACKET_LOG_FILE);
     if (f) {
@@ -222,6 +230,9 @@ void MyMesh::logRx(mesh::Packet *pkt, int len, float score) {
   }
 }
 void MyMesh::logTx(mesh::Packet *pkt, int len) {
+#ifdef ETH_ENABLED
+  mqtt_telemetry.publishPacketTx(pkt->getPayloadType(), pkt->isRouteDirect(), len, pkt->payload_len);
+#endif
   if (_logging) {
     File f = openAppend(PACKET_LOG_FILE);
     if (f) {

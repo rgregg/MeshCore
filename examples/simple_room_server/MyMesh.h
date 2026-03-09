@@ -23,6 +23,10 @@
 #include <RTClib.h>
 #include <target.h>
 
+#ifdef ETH_ENABLED
+#include <helpers/MqttTelemetry.h>
+#endif
+
 /* ------------------------------ Config -------------------------------- */
 
 #ifndef FIRMWARE_BUILD_DATE
@@ -87,7 +91,11 @@ struct PostInfo {
   char text[MAX_POST_TEXT_LEN+1];
 };
 
-class MyMesh : public mesh::Mesh, public CommonCLICallbacks {
+class MyMesh : public mesh::Mesh, public CommonCLICallbacks
+#ifdef ETH_ENABLED
+  , public MqttTelemetryCallbacks
+#endif
+{
   FILESYSTEM* _fs;
   uint32_t last_millis;
   uint64_t uptime_millis;

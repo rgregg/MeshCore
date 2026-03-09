@@ -35,6 +35,10 @@
 #include <helpers/RegionMap.h>
 #include "RateLimiter.h"
 
+#ifdef ETH_ENABLED
+#include <helpers/MqttTelemetry.h>
+#endif
+
 #ifdef WITH_BRIDGE
 extern AbstractBridge* bridge;
 #endif
@@ -80,7 +84,11 @@ struct NeighbourInfo {
 
 #define PACKET_LOG_FILE  "/packet_log"
 
-class MyMesh : public mesh::Mesh, public CommonCLICallbacks {
+class MyMesh : public mesh::Mesh, public CommonCLICallbacks
+#ifdef ETH_ENABLED
+  , public MqttTelemetryCallbacks
+#endif
+{
   FILESYSTEM* _fs;
   uint32_t last_millis;
   uint64_t uptime_millis;
