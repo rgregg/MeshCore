@@ -3,6 +3,7 @@
 #include <MeshCore.h>
 #include <Arduino.h>
 #include <helpers/NRF52Board.h>
+#include <helpers/ui/LEDManager.h>
 
 #ifdef XIAO_NRF52
 
@@ -16,14 +17,12 @@ public:
   XiaoNrf52Board() : NRF52Board("XIAO_NRF52_OTA") {}
   void begin();
 
-#if defined(P_LORA_TX_LED)
   void onBeforeTransmit() override {
-    digitalWrite(P_LORA_TX_LED, LOW);   // turn TX LED on
+    if (ledManager) ledManager->onBeforeTransmit();
   }
   void onAfterTransmit() override {
-    digitalWrite(P_LORA_TX_LED, HIGH);   // turn TX LED off
+    if (ledManager) ledManager->onAfterTransmit();
   }
-#endif
 
   uint16_t getBattMilliVolts() override;
 
@@ -37,8 +36,9 @@ public:
 #ifdef PIN_USER_BTN
     while(digitalRead(PIN_USER_BTN) == LOW);
 #endif
+
+    if (ledManager) ledManager->powerOff();
     digitalWrite(LED_GREEN, HIGH);
-    digitalWrite(LED_BLUE, HIGH);
     digitalWrite(PIN_LED, HIGH);
 
 #ifdef PIN_USER_BTN
