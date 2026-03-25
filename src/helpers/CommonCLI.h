@@ -5,7 +5,7 @@
 #include <helpers/SensorManager.h>
 #include <helpers/ClientACL.h>
 
-#if defined(WITH_RS232_BRIDGE) || defined(WITH_ESPNOW_BRIDGE)
+#if defined(WITH_RS232_BRIDGE) || defined(WITH_ESPNOW_BRIDGE) || defined(WITH_ETHERNET_BRIDGE)
 #define WITH_BRIDGE
 #endif
 
