@@ -41,8 +41,8 @@ void SerialBLEInterface::onDisconnect(uint16_t connection_handle, uint8_t reason
       instance->_conn_handle = BLE_CONN_HANDLE_INVALID;
       instance->_isDeviceConnected = false;
       instance->clearBuffers();
-      // Advertising auto-restarts on disconnect
-      if (instance->_ledManager) instance->_ledManager->setActivityState(LED_CONN_ADVERTISING);
+      // Advertising auto-restarts on disconnect, but only if BLE is still enabled
+      if (instance->_isEnabled && instance->_ledManager) instance->_ledManager->setActivityState(LED_CONN_ADVERTISING);
     }
   }
 }

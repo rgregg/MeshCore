@@ -26,7 +26,6 @@ void WioWM1110Board::begin() {
   delay(10);
 
   // Start LEDs with defaults; prefs are applied after loadPrefs()
-  // LED_GREEN was previously always on; LED_STATUS_ALWAYS_ON preserves that behavior
   static LEDManager _ledManager(LED_GREEN, LED_RED);
   ledManager = &_ledManager;
   ledManager->begin(LED_STATUS_BOOT_30S, LED_ACTIVITY_BOTH);

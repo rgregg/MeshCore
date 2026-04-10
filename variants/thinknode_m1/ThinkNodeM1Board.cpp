@@ -15,8 +15,8 @@ void ThinkNodeM1Board::begin() {
   delay(10); // give sx1262 some time to power up
 
   // Start LEDs with defaults; prefs are applied after loadPrefs()
-  // LED_GREEN is active-LOW (LED_STATE_ON=LOW), P_LORA_TX_LED(13) is active-HIGH
-  static LEDManager _ledManager(LED_GREEN, 13, false, true);
+  // LED_GREEN is active-LOW (LED_STATE_ON=LOW), P_LORA_TX_LED is active-HIGH
+  static LEDManager _ledManager(LED_GREEN, P_LORA_TX_LED, false, true);
   ledManager = &_ledManager;
   ledManager->begin(LED_STATUS_BOOT_30S, LED_ACTIVITY_BOTH);
 }

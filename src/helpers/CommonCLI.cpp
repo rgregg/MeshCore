@@ -88,8 +88,12 @@ void CommonCLI::loadPrefsInt(FILESYSTEM* fs, const char* filename) {
     file.read((uint8_t *)&_prefs->discovery_mod_timestamp, sizeof(_prefs->discovery_mod_timestamp)); // 162
     file.read((uint8_t *)&_prefs->adc_multiplier, sizeof(_prefs->adc_multiplier));                 // 166
     file.read((uint8_t *)_prefs->owner_info, sizeof(_prefs->owner_info));                          // 170
-    file.read((uint8_t *)&_prefs->led_status_mode, sizeof(_prefs->led_status_mode));               // 290
-    file.read((uint8_t *)&_prefs->led_activity_mode, sizeof(_prefs->led_activity_mode));           // 291
+
+    // LED prefs added later; older prefs files end at offset 290
+    if (file.available() >= 2) {
+      file.read((uint8_t *)&_prefs->led_status_mode, sizeof(_prefs->led_status_mode));            // 290
+      file.read((uint8_t *)&_prefs->led_activity_mode, sizeof(_prefs->led_activity_mode));        // 291
+    }
     // next: 292
 
     // sanitise bad pref values
