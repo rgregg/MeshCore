@@ -267,13 +267,18 @@ void loop() {
 
 #ifdef ETHERNET_ENABLED
   serial_interface.loop();
-#endif
-
+#else
+  // Non-Ethernet builds may sleep to save power. Ethernet builds are
+  // mains/PoE-powered and must keep servicing the W5100S every loop: nRF52
+  // sleep() is a WFE wait that would starve Ethernet polling, and on PoE
+  // (RAK19018/Silvertel) it drops below the converter's hold current and
+  // triggers foldback resets. So skip the sleep path entirely on Ethernet.
   if (!the_mesh.hasPendingWork()) {
 #if defined(NRF52_PLATFORM)
     board.sleep(0); // nrf ignores seconds param, sleeps whenever possible
 #endif
   }
+#endif
 
 #if defined(ESP32) && defined(WIFI_SSID)
   // Safely attempt to reconnect every 10 seconds if flagged

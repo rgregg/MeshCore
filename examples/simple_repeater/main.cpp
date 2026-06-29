@@ -188,6 +188,10 @@ void loop() {
 #endif
   rtc_clock.tick();
 
+#ifndef ETHERNET_ENABLED
+  // Ethernet builds never sleep: the W5100S must be serviced every loop, and on
+  // PoE (RAK19018/Silvertel) sleeping drops below the converter's hold current
+  // and causes foldback resets. Non-Ethernet builds keep the normal powersave.
   if (the_mesh.getNodePrefs()->powersaving_enabled && !the_mesh.hasPendingWork()) {
 #if defined(NRF52_PLATFORM)
     board.sleep(0); // nrf ignores seconds param, sleeps whenever possible
@@ -197,4 +201,5 @@ void loop() {
     }
 #endif
   }
+#endif // ETHERNET_ENABLED
 }
