@@ -27,6 +27,14 @@ static bool isValidName(const char *n) {
   return true;
 }
 
+// Parse "A.B.C.D" into out[4]; returns true on success.
+static bool parseIPv4(const char* s, uint8_t out[4]) {
+  int a, b, c, d;
+  if (sscanf(s, "%d.%d.%d.%d", &a, &b, &c, &d) != 4) return false;
+  if ((a|b|c|d) < 0 || a > 255 || b > 255 || c > 255 || d > 255) return false;
+  out[0]=a; out[1]=b; out[2]=c; out[3]=d; return true;
+}
+
 void CommonCLI::loadPrefs(FILESYSTEM* fs) {
   if (fs->exists("/com_prefs")) {
     loadPrefsInt(fs, "/com_prefs");   // new filename
@@ -808,6 +816,22 @@ void CommonCLI::handleSetCmd(uint32_t sender_timestamp, char* command, char* rep
       _prefs->adc_multiplier = 0.0f;
       strcpy(reply, "Error: unsupported");
     };
+  } else if (memcmp(config, "eth.dhcp ", 9) == 0) {
+    _prefs->eth_use_dhcp = (memcmp(&config[9], "on", 2) == 0) ? 1 : 0;
+    savePrefs();
+    sprintf(reply, "OK - eth.dhcp %s", _prefs->eth_use_dhcp ? "on" : "off");
+  } else if (memcmp(config, "eth.ip ", 7) == 0) {
+    if (parseIPv4(&config[7], _prefs->eth_ip)) { savePrefs(); strcpy(reply, "OK"); }
+    else strcpy(reply, "ERROR: bad IPv4");
+  } else if (memcmp(config, "eth.gateway ", 12) == 0) {
+    if (parseIPv4(&config[12], _prefs->eth_gateway)) { savePrefs(); strcpy(reply, "OK"); }
+    else strcpy(reply, "ERROR: bad IPv4");
+  } else if (memcmp(config, "eth.subnet ", 11) == 0) {
+    if (parseIPv4(&config[11], _prefs->eth_subnet)) { savePrefs(); strcpy(reply, "OK"); }
+    else strcpy(reply, "ERROR: bad IPv4");
+  } else if (memcmp(config, "eth.dns ", 8) == 0) {
+    if (parseIPv4(&config[8], _prefs->eth_dns)) { savePrefs(); strcpy(reply, "OK"); }
+    else strcpy(reply, "ERROR: bad IPv4");
   } else {
     strcpy(reply, "unknown config: ");
     StrHelper::strncpy(&reply[16], config, 160-17);
@@ -983,6 +1007,16 @@ void CommonCLI::handleGetCmd(uint32_t sender_timestamp, char* command, char* rep
 #else
     strcpy(reply, "ERROR: Power management not supported");
 #endif
+  } else if (memcmp(config, "eth.dhcp", 8) == 0) {
+    sprintf(reply, "> %s", _prefs->eth_use_dhcp ? "on" : "off");
+  } else if (memcmp(config, "eth.gateway", 11) == 0) {
+    sprintf(reply, "> %u.%u.%u.%u", _prefs->eth_gateway[0], _prefs->eth_gateway[1], _prefs->eth_gateway[2], _prefs->eth_gateway[3]);
+  } else if (memcmp(config, "eth.subnet", 10) == 0) {
+    sprintf(reply, "> %u.%u.%u.%u", _prefs->eth_subnet[0], _prefs->eth_subnet[1], _prefs->eth_subnet[2], _prefs->eth_subnet[3]);
+  } else if (memcmp(config, "eth.dns", 7) == 0) {
+    sprintf(reply, "> %u.%u.%u.%u", _prefs->eth_dns[0], _prefs->eth_dns[1], _prefs->eth_dns[2], _prefs->eth_dns[3]);
+  } else if (memcmp(config, "eth.ip", 6) == 0) {
+    sprintf(reply, "> %u.%u.%u.%u", _prefs->eth_ip[0], _prefs->eth_ip[1], _prefs->eth_ip[2], _prefs->eth_ip[3]);
   } else {
     sprintf(reply, "??: %s", config);
   }
