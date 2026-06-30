@@ -1,5 +1,10 @@
 #pragma once
 
+// A PoE build is an Ethernet build plus power hardening.
+#if defined(ETHERNET_POE) && !defined(ETHERNET_ENABLED)
+  #define ETHERNET_ENABLED
+#endif
+
 #ifdef ETHERNET_ENABLED
 
 #include <Arduino.h>
