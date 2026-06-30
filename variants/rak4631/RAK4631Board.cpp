@@ -11,8 +11,14 @@
 // initializes or the board will brownout from insufficient power delivery.
 // Priority 102 runs just after SystemInit.
 static void __attribute__((constructor(102))) rak4631_early_poe_power() {
-  nrf_gpio_cfg_output(NRF_GPIO_PIN_MAP(1, 2));  // WB_IO2 = P1.02
+  nrf_gpio_cfg_output(NRF_GPIO_PIN_MAP(1, 2));   // WB_IO2 = P1.02 (3V3 peripheral rail)
   nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(1, 2));
+#ifdef ETHERNET_POE
+  // Release the W5100S from reset as early as possible so the PHY draws its
+  // ~120 mA and latches a marginal PoE converter before its foldback timer.
+  nrf_gpio_cfg_output(NRF_GPIO_PIN_MAP(0, 21));  // W5100S RST = P0.21 (WB_IO3)
+  nrf_gpio_pin_set(NRF_GPIO_PIN_MAP(0, 21));
+#endif
 }
 #endif
 
