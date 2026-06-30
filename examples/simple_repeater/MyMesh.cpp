@@ -920,6 +920,13 @@ MyMesh::MyMesh(mesh::MainBoard &board, mesh::Radio &radio, mesh::MillisecondCloc
 #endif
   _prefs.radio_fem_rxgain = 1;
 
+  // Ethernet defaults (DHCP on, all addresses zeroed)
+  _prefs.eth_use_dhcp = 1;
+  memset(_prefs.eth_ip, 0, 4);
+  memset(_prefs.eth_gateway, 0, 4);
+  memset(_prefs.eth_subnet, 0, 4);
+  memset(_prefs.eth_dns, 0, 4);
+
   pending_discover_tag = 0;
   pending_discover_until = 0;
 

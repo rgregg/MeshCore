@@ -661,6 +661,13 @@ MyMesh::MyMesh(mesh::MainBoard &board, mesh::Radio &radio, mesh::MillisecondCloc
   _prefs.advert_loc_policy = ADVERT_LOC_PREFS;
   _prefs.radio_fem_rxgain = 1;
 
+  // Ethernet defaults (DHCP on, all addresses zeroed)
+  _prefs.eth_use_dhcp = 1;
+  memset(_prefs.eth_ip, 0, 4);
+  memset(_prefs.eth_gateway, 0, 4);
+  memset(_prefs.eth_subnet, 0, 4);
+  memset(_prefs.eth_dns, 0, 4);
+
   next_post_idx = 0;
   next_client_idx = 0;
   next_push = 0;
