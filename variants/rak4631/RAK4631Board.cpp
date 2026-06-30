@@ -22,7 +22,14 @@ static void __attribute__((constructor(102))) rak4631_early_poe_power() {
 const PowerMgtConfig power_config = {
   .lpcomp_ain_channel = PWRMGT_LPCOMP_AIN,
   .lpcomp_refsel = PWRMGT_LPCOMP_REFSEL,
-  .voltage_bootlock = PWRMGT_VOLTAGE_BOOTLOCK
+#ifdef ETHERNET_POE
+  // PoE = no battery. isExternalPowered() only detects USB VBUS, not PoE, so
+  // checkBootVoltage() would read the floating battery ADC and SYSTEMOFF-loop
+  // (red-LED flicker). 0 => boot protection disabled.
+  .voltage_bootlock   = 0
+#else
+  .voltage_bootlock   = PWRMGT_VOLTAGE_BOOTLOCK
+#endif
 };
 
 void RAK4631Board::initiateShutdown(uint8_t reason) {
