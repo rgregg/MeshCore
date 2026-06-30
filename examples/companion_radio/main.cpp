@@ -168,6 +168,10 @@ void setup() {
     if ((millis() - timeout) < 5000) { delay(100); } else { break; }
   }
   Serial.println("Initializing Ethernet adapter...");
+  {
+    auto* p = the_mesh.getNodePrefs();
+    serial_interface.setNetConfig(p->eth_use_dhcp, p->eth_ip, p->eth_gateway, p->eth_subnet, p->eth_dns);
+  }
   if (serial_interface.begin()) {
     the_mesh.startInterface(serial_interface);
   } else {

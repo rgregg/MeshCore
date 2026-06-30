@@ -45,33 +45,29 @@ bool SerialEthernetInterface::begin() {
   ETHERNET_SPI_PORT.begin();
   Ethernet.init(ETHERNET_SPI_PORT, PIN_ETHERNET_SS);
 
-  // Use static IP if build flags are defined, otherwise DHCP
-  #if defined(ETHERNET_STATIC_IP) && defined(ETHERNET_STATIC_GATEWAY) && defined(ETHERNET_STATIC_SUBNET) && defined(ETHERNET_STATIC_DNS)
-  IPAddress ip(ETHERNET_STATIC_IP);
-  IPAddress gateway(ETHERNET_STATIC_GATEWAY);
-  IPAddress subnet(ETHERNET_STATIC_SUBNET);
-  IPAddress dns(ETHERNET_STATIC_DNS);
-  Ethernet.begin(mac, ip, dns, gateway, subnet);
-  #else
-  ETHERNET_DEBUG_PRINTLN("Begin");
-  if (Ethernet.begin(mac) == 0) {
-    ETHERNET_DEBUG_PRINTLN("Begin failed.");
+  if (!_use_dhcp) {
+    IPAddress ip(_ip), gw(_gw), sn(_sn), dns(_dns);
+    Ethernet.begin(mac, ip, dns, gw, sn);
+  } else {
+    ETHERNET_DEBUG_PRINTLN("Begin");
+    if (Ethernet.begin(mac) == 0) {
+      ETHERNET_DEBUG_PRINTLN("Begin failed.");
 
-    // DHCP failed -- let's figure out why
-    if (Ethernet.hardwareStatus() == EthernetNoHardware)  // Check for Ethernet hardware present.
-    {
-      ETHERNET_DEBUG_PRINTLN("Ethernet hardware not found.");
+      // DHCP failed -- let's figure out why
+      if (Ethernet.hardwareStatus() == EthernetNoHardware)  // Check for Ethernet hardware present.
+      {
+        ETHERNET_DEBUG_PRINTLN("Ethernet hardware not found.");
+        return false;
+      }
+      if (Ethernet.linkStatus() == LinkOFF)     // No physical connection
+      {
+        ETHERNET_DEBUG_PRINTLN("Ethernet cable not connected.");
+        return false;
+      }
+      ETHERNET_DEBUG_PRINTLN("Ethernet: DHCP failed for unknown reason.");
       return false;
     }
-    if (Ethernet.linkStatus() == LinkOFF)     // No physical connection
-    {
-      ETHERNET_DEBUG_PRINTLN("Ethernet cable not connected.");
-      return false;
-    }
-    ETHERNET_DEBUG_PRINTLN("Ethernet: DHCP failed for unknown reason.");
-    return false;
   }
-  #endif
   ETHERNET_DEBUG_PRINTLN("Ethernet begin complete");
   ETHERNET_DEBUG_PRINT_IP("IP", Ethernet.localIP());
   ETHERNET_DEBUG_PRINT_IP("Subnet", Ethernet.subnetMask());
@@ -81,6 +77,12 @@ bool SerialEthernetInterface::begin() {
   ETHERNET_DEBUG_PRINTLN("Ethernet: listening on TCP port: %d", ETHERNET_TCP_PORT);
 
   return true;
+}
+
+void SerialEthernetInterface::setNetConfig(bool use_dhcp, const uint8_t* ip,
+    const uint8_t* gw, const uint8_t* sn, const uint8_t* dns) {
+  _use_dhcp = use_dhcp;
+  memcpy(_ip, ip, 4); memcpy(_gw, gw, 4); memcpy(_sn, sn, 4); memcpy(_dns, dns, 4);
 }
 
 void SerialEthernetInterface::enable() {

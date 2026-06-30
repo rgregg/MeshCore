@@ -34,4 +34,9 @@ struct NodePrefs {  // persisted to file
   uint8_t autoadd_max_hops;  // 0 = no limit, 1 = direct (0 hops), N = up to N-1 hops (max 64)
   char default_scope_name[31];
   uint8_t default_scope_key[16];
+  uint8_t eth_use_dhcp;
+  uint8_t eth_ip[4];
+  uint8_t eth_gateway[4];
+  uint8_t eth_subnet[4];
+  uint8_t eth_dns[4];
 };

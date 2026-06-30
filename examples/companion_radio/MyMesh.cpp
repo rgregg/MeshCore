@@ -872,6 +872,7 @@ MyMesh::MyMesh(mesh::Radio &radio, mesh::RNG &rng, mesh::RTCClock &rtc, SimpleMe
 
   // defaults
   memset(&_prefs, 0, sizeof(_prefs));
+  _prefs.eth_use_dhcp = 1;   // default to DHCP
   _prefs.airtime_factor = 1.0;
   strcpy(_prefs.node_name, "NONAME");
   _prefs.freq = LORA_FREQ;

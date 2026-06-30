@@ -21,6 +21,9 @@ class SerialEthernetInterface : public BaseSerialInterface {
   EthernetServer server;
   EthernetClient client;
 
+  bool _use_dhcp = true;
+  uint8_t _ip[4], _gw[4], _sn[4], _dns[4];
+
   struct Frame {
     uint8_t len;
     uint8_t buf[MAX_FRAME_SIZE];
@@ -50,6 +53,7 @@ class SerialEthernetInterface : public BaseSerialInterface {
         _rx_len = 0;
     }
     bool begin();
+    void setNetConfig(bool use_dhcp, const uint8_t* ip, const uint8_t* gw, const uint8_t* sn, const uint8_t* dns);
 
     // BaseSerialInterface methods
     void enable() override;
