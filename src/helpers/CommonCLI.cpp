@@ -46,6 +46,13 @@ void CommonCLI::loadPrefsInt(FILESYSTEM* fs, const char* filename) {
   if (file) {
     uint8_t pad[8];
 
+    // Seed eth defaults before reads so a short (pre-upgrade) file leaves them at DHCP defaults
+    _prefs->eth_use_dhcp = 1;
+    memset(_prefs->eth_ip, 0, 4);
+    memset(_prefs->eth_gateway, 0, 4);
+    memset(_prefs->eth_subnet, 0, 4);
+    memset(_prefs->eth_dns, 0, 4);
+
     file.read((uint8_t *)&_prefs->airtime_factor, sizeof(_prefs->airtime_factor));    // 0
     file.read((uint8_t *)&_prefs->node_name, sizeof(_prefs->node_name));              // 4
     file.read(pad, 4);                                                                // 36
@@ -93,7 +100,12 @@ void CommonCLI::loadPrefsInt(FILESYSTEM* fs, const char* filename) {
     file.read((uint8_t *)&_prefs->flood_max_advert, sizeof(_prefs->flood_max_advert));             // 292
     file.read((uint8_t *)&_prefs->radio_fem_rxgain, sizeof(_prefs->radio_fem_rxgain));             // 293
     file.read((uint8_t *)&_prefs->cad_enabled, sizeof(_prefs->cad_enabled));                       // 294
-    // next: 295
+    file.read((uint8_t *)&_prefs->eth_use_dhcp, sizeof(_prefs->eth_use_dhcp));
+    file.read((uint8_t *)_prefs->eth_ip, sizeof(_prefs->eth_ip));
+    file.read((uint8_t *)_prefs->eth_gateway, sizeof(_prefs->eth_gateway));
+    file.read((uint8_t *)_prefs->eth_subnet, sizeof(_prefs->eth_subnet));
+    file.read((uint8_t *)_prefs->eth_dns, sizeof(_prefs->eth_dns));
+    // next: 312
 
     // sanitise bad pref values
     _prefs->rx_delay_base = constrain(_prefs->rx_delay_base, 0, 20.0f);
@@ -190,7 +202,12 @@ void CommonCLI::savePrefs(FILESYSTEM* fs) {
     file.write((uint8_t *)&_prefs->flood_max_advert, sizeof(_prefs->flood_max_advert));             // 292
     file.write((uint8_t *)&_prefs->radio_fem_rxgain, sizeof(_prefs->radio_fem_rxgain));             // 293
     file.write((uint8_t *)&_prefs->cad_enabled, sizeof(_prefs->cad_enabled));                       // 294
-    // next: 295
+    file.write((uint8_t *)&_prefs->eth_use_dhcp, sizeof(_prefs->eth_use_dhcp));
+    file.write((uint8_t *)_prefs->eth_ip, sizeof(_prefs->eth_ip));
+    file.write((uint8_t *)_prefs->eth_gateway, sizeof(_prefs->eth_gateway));
+    file.write((uint8_t *)_prefs->eth_subnet, sizeof(_prefs->eth_subnet));
+    file.write((uint8_t *)_prefs->eth_dns, sizeof(_prefs->eth_dns));
+    // next: 312
 
     file.close();
   }

@@ -65,6 +65,12 @@ struct NodePrefs { // persisted to file
   uint8_t path_hash_mode;   // which path mode to use when sending
   uint8_t loop_detect;
   uint8_t cad_enabled;      // hardware Channel Activity Detection before TX (boolean)
+  // Ethernet network config (node-memory). Default = DHCP.
+  uint8_t eth_use_dhcp;   // 1 = DHCP (default), 0 = static
+  uint8_t eth_ip[4];
+  uint8_t eth_gateway[4];
+  uint8_t eth_subnet[4];
+  uint8_t eth_dns[4];
 };
 
 class CommonCLICallbacks {
