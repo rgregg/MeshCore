@@ -36,6 +36,15 @@ static EthernetServer ethernet_server(ETHERNET_TCP_PORT);
 static EthernetClient ethernet_client;
 static volatile bool ethernet_running = false;
 
+static bool eth_use_dhcp = true;
+static uint8_t eth_ip[4], eth_gw[4], eth_sn[4], eth_dns[4];
+
+static void ethernet_set_config(bool use_dhcp, const uint8_t* ip, const uint8_t* gw,
+                                const uint8_t* sn, const uint8_t* dns) {
+  eth_use_dhcp = use_dhcp;
+  memcpy(eth_ip, ip, 4); memcpy(eth_gw, gw, 4); memcpy(eth_sn, sn, 4); memcpy(eth_dns, dns, 4);
+}
+
 // FreeRTOS task: handles hw init, DHCP, and retries in the background
 static void ethernet_task(void* param) {
   (void)param;
@@ -58,20 +67,25 @@ static void ethernet_task(void* param) {
 
   // Retry loop: keep trying until we get an IP
   while (!ethernet_running) {
-    Serial.println("ETH: Attempting DHCP...");
-    if (Ethernet.begin(mac, 10000, 2000) == 0) {
+    if (eth_use_dhcp) {
+      Serial.println("ETH: Attempting DHCP...");
+      if (Ethernet.begin(mac, 10000, 2000) == 0) {
+        if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+          Serial.println("ETH: Hardware not found, giving up");
+          vTaskDelete(NULL); return;
+        }
+        Serial.println(Ethernet.linkStatus() == LinkOFF
+          ? "ETH: Cable not connected, will retry" : "ETH: DHCP failed, will retry");
+        vTaskDelay(pdMS_TO_TICKS(ETHERNET_RETRY_INTERVAL_MS));
+        continue;
+      }
+    } else {
+      IPAddress ip(eth_ip), gw(eth_gw), sn(eth_sn), dns(eth_dns);
+      Ethernet.begin(mac, ip, dns, gw, sn);  // static: no return code
       if (Ethernet.hardwareStatus() == EthernetNoHardware) {
         Serial.println("ETH: Hardware not found, giving up");
-        vTaskDelete(NULL);
-        return;
+        vTaskDelete(NULL); return;
       }
-      if (Ethernet.linkStatus() == LinkOFF) {
-        Serial.println("ETH: Cable not connected, will retry");
-      } else {
-        Serial.println("ETH: DHCP failed, will retry");
-      }
-      vTaskDelay(pdMS_TO_TICKS(ETHERNET_RETRY_INTERVAL_MS));
-      continue;
     }
 
     IPAddress ip = Ethernet.localIP();
@@ -81,7 +95,7 @@ static void ethernet_task(void* param) {
     ethernet_running = true;
   }
 
-  // DHCP succeeded, task is done
+  // Init succeeded, task is done
   vTaskDelete(NULL);
 }
 
@@ -96,7 +110,8 @@ static bool ethernet_handle_command(const char* command, char* reply) {
       strcpy(reply, "ETH: not connected");
     } else {
       IPAddress ip = Ethernet.localIP();
-      sprintf(reply, "ETH: %u.%u.%u.%u:%d", ip[0], ip[1], ip[2], ip[3], ETHERNET_TCP_PORT);
+      sprintf(reply, "ETH: %u.%u.%u.%u:%d %s", ip[0], ip[1], ip[2], ip[3], ETHERNET_TCP_PORT,
+              eth_use_dhcp ? "(dhcp)" : "(static)");
     }
     return true;
   }

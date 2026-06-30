@@ -107,7 +107,11 @@ void setup() {
 #endif
 
 #ifdef ETHERNET_ENABLED
-  ethernet_start_task();
+  {
+    auto* p = the_mesh.getNodePrefs();
+    ethernet_set_config(p->eth_use_dhcp, p->eth_ip, p->eth_gateway, p->eth_subnet, p->eth_dns);
+    ethernet_start_task();
+  }
 #endif
 
   // send out initial zero hop Advertisement to the mesh
