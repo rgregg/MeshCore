@@ -2012,6 +2012,13 @@ void MyMesh::enterCLIRescue() {
   Serial.println("========= CLI Rescue =========");
 }
 
+static bool parseIPv4(const char* s, uint8_t out[4]) {
+  int a, b, c, d;
+  if (sscanf(s, "%d.%d.%d.%d", &a, &b, &c, &d) != 4) return false;
+  if ((a|b|c|d) < 0 || a > 255 || b > 255 || c > 255 || d > 255) return false;
+  out[0]=a; out[1]=b; out[2]=c; out[3]=d; return true;
+}
+
 void MyMesh::checkCLIRescueCmd() {
   int len = strlen(cli_command);
   while (Serial.available() && len < sizeof(cli_command)-1) {
@@ -2035,6 +2042,37 @@ void MyMesh::checkCLIRescueCmd() {
         _prefs.ble_pin = atoi(&config[4]);
         savePrefs();
         Serial.printf("  > pin is now %06d\n", _prefs.ble_pin);
+      } else if (memcmp(config, "eth.dhcp ", 9) == 0) {
+        _prefs.eth_use_dhcp = (memcmp(&config[9], "on", 2) == 0) ? 1 : 0;
+        savePrefs();
+        Serial.printf("  > eth.dhcp %s\n", _prefs.eth_use_dhcp ? "on" : "off");
+      } else if (memcmp(config, "eth.ip ", 7) == 0) {
+        if (parseIPv4(&config[7], _prefs.eth_ip)) { savePrefs(); Serial.println("  > OK"); }
+        else Serial.println("  Error: bad IPv4");
+      } else if (memcmp(config, "eth.gateway ", 12) == 0) {
+        if (parseIPv4(&config[12], _prefs.eth_gateway)) { savePrefs(); Serial.println("  > OK"); }
+        else Serial.println("  Error: bad IPv4");
+      } else if (memcmp(config, "eth.subnet ", 11) == 0) {
+        if (parseIPv4(&config[11], _prefs.eth_subnet)) { savePrefs(); Serial.println("  > OK"); }
+        else Serial.println("  Error: bad IPv4");
+      } else if (memcmp(config, "eth.dns ", 8) == 0) {
+        if (parseIPv4(&config[8], _prefs.eth_dns)) { savePrefs(); Serial.println("  > OK"); }
+        else Serial.println("  Error: bad IPv4");
+      } else {
+        Serial.printf("  Error: unknown config: %s\n", config);
+      }
+    } else if (memcmp(cli_command, "get ", 4) == 0) {
+      const char* config = &cli_command[4];
+      if (memcmp(config, "eth.dhcp", 8) == 0) {
+        Serial.printf("  > %s\n", _prefs.eth_use_dhcp ? "on" : "off");
+      } else if (memcmp(config, "eth.gateway", 11) == 0) {
+        Serial.printf("  > %u.%u.%u.%u\n", _prefs.eth_gateway[0], _prefs.eth_gateway[1], _prefs.eth_gateway[2], _prefs.eth_gateway[3]);
+      } else if (memcmp(config, "eth.subnet", 10) == 0) {
+        Serial.printf("  > %u.%u.%u.%u\n", _prefs.eth_subnet[0], _prefs.eth_subnet[1], _prefs.eth_subnet[2], _prefs.eth_subnet[3]);
+      } else if (memcmp(config, "eth.dns", 7) == 0) {
+        Serial.printf("  > %u.%u.%u.%u\n", _prefs.eth_dns[0], _prefs.eth_dns[1], _prefs.eth_dns[2], _prefs.eth_dns[3]);
+      } else if (memcmp(config, "eth.ip", 6) == 0) {
+        Serial.printf("  > %u.%u.%u.%u\n", _prefs.eth_ip[0], _prefs.eth_ip[1], _prefs.eth_ip[2], _prefs.eth_ip[3]);
       } else {
         Serial.printf("  Error: unknown config: %s\n", config);
       }
